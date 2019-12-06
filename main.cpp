@@ -6,6 +6,8 @@
 
 using namespace std;
 
+const int DENOMINATIONS = 6;
+
 const int VIEW_MENU = 1;
 const int VIEW_WITHDRAW = 2;
 const int VIEW_CHANGE_PIN = 3;
@@ -16,6 +18,7 @@ const string ERR_MSG_ACCOUNT_LOCKED = "This account has been locked. You are una
 const string ERR_MSG_PIN_MISMATCH = "Numbers must match, try again...";
 const string ERR_MSG_PIN_LENGTH = "PIN must be exactly 4 digits long. Please try again...";
 const string ERR_MSG_PIN_DIGITS = "PIN must consist only of digits. Please try again...";
+const string ERR_MSG_NOT_ENOUGH_MONEY = "You dont have enough money on you account. Please enter lower number...";
 
 const string MSG_EXIT = "Have a nice day!";
 
@@ -95,7 +98,10 @@ class Atm {
         vector<Client> clients;
         int currentView;
 
+        int banknotes[DENOMINATIONS][2];
+
         void menuScreen() {
+            printHeader("ATM MENU");
             int option;
 
             cout << "Select option:" << endl;
@@ -122,6 +128,8 @@ class Atm {
         }
 
         bool loginScreen() {
+            printHeader("LOGIN");
+
             string clientCardNumber,
                 clientPIN;
 
@@ -172,6 +180,7 @@ class Atm {
         }
 
         void changePinScreen() {
+            printHeader("CHANGE PIN");
             string pin1, pin2;
 
             cout << "Enter new PIN: ";
@@ -198,8 +207,69 @@ class Atm {
             cout << ERR_MSG_PIN_MISMATCH << endl;
         }
 
-        bool withdrawScreen() {
-            cout << "Withdraw money" << endl;
+        void withdrawScreen() {
+            printHeader("WITHDRAW");
+
+            double amount;
+
+            cout << "Account balance: " << currentClient->balance << endl;
+            cout << "Enter amount to be withdrawn (enter '0' to go back): ";
+            cin >> amount;
+
+            if (amount == 0) {
+                currentView = VIEW_MENU;
+                return;
+            }
+
+            if (amount > currentClient->balance) {
+                cout << ERR_MSG_NOT_ENOUGH_MONEY << endl;
+                return;
+            }
+
+            int out[DENOMINATIONS];
+            double leftover = getMoney(amount, 0, out);
+            int total = 0;
+
+            for (int i = 0; i < DENOMINATIONS; i++) {
+                cout << banknotes[i][0] << " -> " << out[i] << "(" << banknotes[i][1] << ")" << endl;
+                total += banknotes[i][0] * out[i];
+            }
+
+
+            if (total < amount) {
+                cout << "Not enogh banknotes to fulfill request. Closest amount: " << total << endl;
+                undoWithdraw(out);
+            } else {
+                cout << "Amount withdrawn: " << total << endl;
+                currentClient->balance -= total;
+            }
+        }
+
+        double getMoney(double val, int it, int arr[DENOMINATIONS]) {
+            int x = val / banknotes[it][0];
+
+            if (banknotes[it][1] < x) {
+                x = banknotes[it][1];
+                banknotes[it][1] = 0;
+            } else {
+                banknotes[it][1] -= x;
+            }
+
+            double rest = val - x * banknotes[it][0];
+            arr[it] = x;
+            it++;
+            if (it < DENOMINATIONS) {
+                getMoney(rest, it, arr);
+            }
+
+            return rest;
+        }
+
+        void undoWithdraw(int arr[DENOMINATIONS]) {
+            for (int i = 0; i < DENOMINATIONS; i++) {
+                banknotes[i][1] += arr[i];
+                arr[i] = 0;
+            }
         }
 
         Client* getClientByCardNumber(string cardNumber) {
@@ -225,6 +295,33 @@ class Atm {
             }
 
             clientsFile.close();
+
+            ifstream banknotesFile;
+            banknotesFile.open(banknotesDataFileName);
+            int lineNumber = 0;
+
+            while (banknotesFile) {
+                getline(banknotesFile, line);
+                processBanknoteDataString(lineNumber, line);
+                lineNumber++;
+            }
+
+            banknotesFile.close();
+        }
+
+        void processBanknoteDataString(int lineNumber, string rawData) {
+            char delimiter = '\t';
+            size_t pos = 0;
+            string token;
+
+            int column = 0;
+
+            while ((pos = rawData.find(delimiter)) != string::npos) {
+                token = rawData.substr(0, pos);
+                rawData.erase(0, pos + 1);
+                banknotes[lineNumber][column] = stoi(token);
+                column++;
+            }
         }
 
         Client parseClientDataString(string rawData) {
@@ -266,6 +363,21 @@ class Atm {
 
             return c;
         }
+
+        void printHeader(string title) {
+            cout << "\n*****";
+            for (int i = 0; i < title.size(); i++) {
+                cout << "*";
+            }
+            cout << "*****" << endl;
+            cout << "***  " << title << "  ***" << endl;
+            cout << "*****";
+            for (int i = 0; i < title.size(); i++) {
+                cout << "*";
+            }
+            cout << "*****" << endl;
+        }
+
 };
 
 int main(void)

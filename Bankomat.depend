@@ -1,6 +1,8 @@
 # depslib dependency file v1.0
-1575648345 source:/home/vjadro/dev/cpp/bankomat/Bankomat/main.cpp
+1575660834 source:/home/vjadro/dev/cpp/bankomat/Bankomat/main.cpp
 	<iostream>
 	<fstream>
+	<sstream>
 	<vector>
+	<stdlib.h>
 
