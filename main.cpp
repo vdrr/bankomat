@@ -4,6 +4,13 @@
 #include <vector>
 #include <stdlib.h>
 
+
+/*
+    TODO:
+    Save new data files on program exit
+    Cleanup code
+*/
+
 using namespace std;
 
 const int DENOMINATIONS = 6;
